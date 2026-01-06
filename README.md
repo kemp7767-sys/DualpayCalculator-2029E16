@@ -1,1 +1,85 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <title>DualPay Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: auto;
+        }
+        input, select, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .result {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>DualPay Calculator</h2>
+
+    <label>Дължима сума</label>
+    <input type="number" id="dueAmount" placeholder="Сума">
+
+    <select id="dueCurrency">
+        <option value="BGN">Лева</option>
+        <option value="EUR">Евро</option>
+    </select>
+
+    <label>Платено в лева</label>
+    <input type="number" id="paidBGN" placeholder="0">
+
+    <label>Платено в евро</label>
+    <input type="number" id="paidEUR" placeholder="0">
+
+    <button onclick="calculateChange()">Изчисли рестото</button>
+
+    <div class="result" id="result"></div>
+</div>
+
+<script>
+const rate = 1.95583;
+
+function calculateChange() {
+    const dueAmount = parseFloat(document.getElementById("dueAmount").value) || 0;
+    const dueCurrency = document.getElementById("dueCurrency").value;
+
+    const paidBGN = parseFloat(document.getElementById("paidBGN").value) || 0;
+    const paidEUR = parseFloat(document.getElementById("paidEUR").value) || 0;
+
+    let dueInBGN = dueCurrency === "EUR" ? dueAmount * rate : dueAmount;
+    let paidTotalBGN = paidBGN + (paidEUR * rate);
+
+    let changeBGN = paidTotalBGN - dueInBGN;
+
+    if (changeBGN < 0) {
+        document.getElementById("result").innerText = "Недостатъчна сума!";
+        return;
+    }
+
+    let changeEUR = changeBGN / rate;
+
+    document.getElementById("result").innerText =
+        `Ресто: ${changeEUR.toFixed(2)} EUR (${changeBGN.toFixed(2)} BGN)`;
+}
+</script>
+
+</body>
+</html>
 # DualpayCalculator-2029E16
