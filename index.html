@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#16a34a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>DualpayCalculator — Ресто в BGN / EUR</title>
+
+  <!-- Google Fonts: Comfortaa (артистичен, заоблен) + Inter (стегнат, делови) -->
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN (single-file usage) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Manifest placeholder (will be replaced dynamically) -->
+  <link id="pwa-manifest" rel="manifest" href="#" />
+
+  <!-- Apple touch icon placeholder (will be set dynamically) -->
+  <link id="apple-touch-icon" rel="apple-touch-icon" href="#" />
+
+  <style>
+    :root{
+      --rate: 1.95583;
+      --green: #16a34a;
+      --card-green: rgba(22,163,74,0.12);
+      --blue-input: #3b82f6;
+      --yellow-tile: #facc15;
+      --glass-bg: rgba(255,255,255,0.06);
+      --shadow-lg: 0 12px 30px rgba(6, 95, 70, 0.25);
+      --muted: #6b7280;
+    }
+
+    html,body,#app{
+      height:100%;
+    }
+
+    body{
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      background: linear-gradient(180deg, rgba(6,95,70,0.04), rgba(6,95,70,0.02));
+      color: #0f172a;
+      margin:0;
+      padding:0;
+      -webkit-tap-highlight-color: transparent;
+      position:relative;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    /* App-like window */
+    .app-window{
+      width: min(720px, 96vw);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.28));
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(8px) saturate(120%);
+      -webkit-backdrop-filter: blur(8px) saturate(120%);
+      border: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .app-header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:16px 18px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    }
+
+    .logo-tile{
+      width:56px;height:56px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+      background: var(--yellow-tile);
+      box-shadow: 0 6px 18px rgba(250, 204, 21, 0.18), inset 0 -8px 18px rgba(0,0,0,0.08);
+      font-family: "Comfortaa", "Inter", sans-serif;
+    }
+
+    .app-title{
+      font-family: "Comfortaa", "Inter", sans-serif;
+      font-weight:700;
+      font-size:1.05rem;
+      color:#052e21;
+    }
+
+    /* Main body */
+    .app-body{
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    label.input-label{
+      display:block;
+      font-weight:600;
+      color:#052e21;
+      margin-bottom:6px;
+      font-size:0.92rem;
+    }
+
+    .field{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      width:100%;
+    }
+
+    input[type="number"]{
+      -moz-appearance: textfield;
+    }
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .glass-card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      padding:14px;
+      border-radius:12px;
+      box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+      border:1px solid rgba(255,255,255,0.04);
+    }
+
+    .blue-input{
+      background: var(--blue-input);
+      color: white;
+    }
+
+    .segmented{
+      display:inline-flex;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      padding:4px;
+      gap:4px;
+    }
+    .segmented button{
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:600;
+      font-family: "Inter", sans-serif;
+      font-size:0.92rem;
+      min-width:72px;
+      text-align:center;
+    }
+    .segmented button.active{
+      background: white;
+      color: #064e3b;
+      box-shadow: 0 6px 14px rgba(10, 120, 80, 0.12);
+    }
+
+    .result-box{
+      transition: all 320ms cubic-bezier(.2,.9,.3,1);
+      transform-origin: top center;
+      opacity:0; max-height:0; padding:0 0; overflow:hidden;
+    }
+    .result-box.visible{
+      opacity:1; max-height:420px; padding:12px 0;
+    }
+
+    .change-amount{
+      font-weight:700; font-size:1.4rem; color:#063; font-family: "Comfortaa", "Inter", sans-serif;
+    }
+    .secondary{
+      color:var(--muted); font-size:0.95rem;
+    }
+
+    .error-box{
+      background: rgba(248,113,113,0.12);
+      color:#7f1d1d;
+      border: 1px solid rgba(248,113,113,0.18);
+      padding:10px 12px;
+      border-radius:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-weight:600;
+    }
+
+    /* Background pattern: grid of small icon elements */
+    #pattern{
+      position:absolute; inset:0; z-index:0; pointer-events:none;
+    }
+    .pattern-item{
+      position:absolute; width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+      opacity:0.08; color:#374151; filter:grayscale(10%);
+      transform-origin:center center;
+    }
+
+    /* floating animation */
+    @keyframes floatA {
+      0%{ transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+      50%{ transform: translate3d(8px,-6px,0) rotate(3deg) scale(1.06); }
+      100%{ transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+    @keyframes floatB {
+      0%{ transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+      50%{ transform: translate3d(-10px,6px,0) rotate(-4deg) scale(0.96); }
+      100%{ transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+
+    .footer{
+      padding:12px 18px; font-size:0.92rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center;
+      border-top:1px solid rgba(2,6,23,0.03);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    }
+
+    /* mobile-first sizes for big touch targets */
+    .big-input{
+      font-size:1.05rem; padding:12px; border-radius:10px; outline:none; border:1px solid rgba(2,6,23,0.05);
+    }
+
+    /* ensure Comfortaa used for headings and icons */
+    .title-comfy{ font-family: "Comfortaa", "Inter", sans-serif; }
+
+    /* responsive */
+    @media (min-width: 768px){
+      .app-body{ padding:22px; }
+      .logo-tile{ width:64px;height:64px;border-radius:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="pattern" aria-hidden="true"></div>
+
+  <main id="app" class="w-full flex items-center justify-center p-4">
+    <section class="app-window relative z-10">
+      <header class="app-header">
+        <div class="logo-tile" id="logoTile" aria-hidden="true">
+          <!-- SVG icon will be injected -->
+        </div>
+        <div>
+          <div class="app-title title-comfy">Dualpay — Калкулатор за ресто</div>
+          <div class="text-sm text-gray-600">Бързо и точно ресто в BGN и EUR</div>
+        </div>
+      </header>
+
+      <div class="app-body">
+        <!-- Сума за плащане -->
+        <div class="glass-card">
+          <label class="input-label">Сума за плащане</label>
+          <div class="field">
+            <input id="amount" class="big-input flex-1 blue-input rounded-md px-4" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" />
+            <select id="amount-currency" class="ml-2 rounded-md px-3 py-2 bg-white border" aria-label="Валута">
+              <option value="BGN">BGN</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div class="text-xs text-gray-600 mt-2">Въведи сумата, която трябва да бъде платена. Фон на полето: син.</div>
+        </div>
+
+        <!-- Платено в лв и Платено в € -->
+        <div class="glass-card">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="input-label">Платено в лв</label>
+              <input id="paid-bgn" class="big-input w-full rounded-md px-4" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="input-label">Платено в €</label>
+              <input id="paid-eur" class="big-input w-full rounded-md px-4" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" />
+            </div>
+          </div>
+          <div class="text-xs text-gray-600 mt-2">Можеш да въведеш сума и в лева, и в евро едновременно. Калкулацията е в реално време.</div>
+        </div>
+
+        <!-- Results / Error -->
+        <div id="error" class="error-box hidden" role="alert" aria-live="polite"></div>
+
+        <div id="result" class="result-box" aria-live="polite">
+          <div class="glass-card">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-gray-600">Ресто</div>
+                <div id="resto-primary" class="change-amount">0.00 BGN</div>
+                <div id="resto-secondary" class="secondary">≈ 0.00 EUR</div>
+              </div>
+
+              <div>
+                <div class="text-sm text-gray-600 mb-2">Покажи в:</div>
+                <div class="segmented" role="tablist" aria-label="Избор на валута">
+                  <button id="show-bgn" class="active" role="tab" aria-selected="true">BGN</button>
+                  <button id="show-eur" role="tab" aria-selected="false">EUR</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom: helpful note -->
+        <div class="text-sm text-gray-600">
+          Интерфейс оптимизиран за работа с една ръка — основните контроли са лесно достъпни отдолу.
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div class="text-sm">Курс: 1 EUR = 1.95583 BGN</div>
+        <div class="text-sm">Име ©</div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    /*******************************************************************
+     * Константи и елементи
+     *******************************************************************/
+    const RATE = 1.95583; // фиксиран курс
+    const amountEl = document.getElementById('amount');
+    const amountCurrencyEl = document.getElementById('amount-currency');
+    const paidBgnEl = document.getElementById('paid-bgn');
+    const paidEurEl = document.getElementById('paid-eur');
+    const errorEl = document.getElementById('error');
+    const resultBox = document.getElementById('result');
+    const restoPrimary = document.getElementById('resto-primary');
+    const restoSecondary = document.getElementById('resto-secondary');
+    const showBgnBtn = document.getElementById('show-bgn');
+    const showEurBtn = document.getElementById('show-eur');
+
+    // Ensure numeric parsing is robust
+    function toNum(v){ v = v || ''; v = v.toString().replace(',', '.'); const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+    /*******************************************************************
+     * Икона (SVG) генератор — използваме за manifest + apple-touch-icon + логото в header
+     * Визуално описание на иконата:
+     *  - Правоъгълна плочка с леко заоблени ъгли (жълт цвят).
+     *  - В центъра: стилизирана двулевова/2€ монета в златисто с лек контур и блясък.
+     *  - На монетата е изобразена голяма цифра "2" и символ "€" в синхронизираща композиция.
+     *  - Иконата използва минималистичен, леко пластичен стил (shadow + inner-gloss).
+     *******************************************************************/
+    function generateIconSVG(size = 512){
+      const bg = '#facc15';
+      const coin = '#b8860b';
+      const shine = 'rgba(255,255,255,0.55)';
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512" role="img" aria-label="Dualpay икона">
+          <rect rx="64" width="512" height="512" fill="${bg}" />
+          <g transform="translate(256,260)">
+            <circle r="110" fill="${coin}" stroke="#6b4f02" stroke-width="8" />
+            <g transform="translate(-30,-12)" fill="#fff" font-family="Comfortaa, Inter, sans-serif" font-weight="700" font-size="140" text-anchor="middle">
+              <text x="80" y="70" fill="#fff" stroke="rgba(0,0,0,0.06)" stroke-width="2">2</text>
+            </g>
+            <g transform="translate(50,12)" fill="#fff" font-family="Comfortaa, Inter, sans-serif" font-weight="700" font-size="56" text-anchor="middle">
+              <text x="0" y="0">€</text>
+            </g>
+            <ellipse cx="0" cy="-60" rx="60" ry="22" fill="${shine}" opacity="0.18" />
+          </g>
+        </svg>
+      `;
+      return svg.trim();
+    }
+
+    function svgToDataUrl(svg){
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // inject header logo
+    const logoTile = document.getElementById('logoTile');
+    const svgIcon = generateIconSVG(256);
+    logoTile.innerHTML = svgIcon;
+
+    // Create manifest JSON and set <link rel="manifest">
+    (function createManifest(){
+      const svgDataUrl = svgToDataUrl(svgIcon);
+      const manifest = {
+        name: "Dualpay — Калкулатор за ресто",
+        short_name: "Dualpay",
+        description: "Калкулатор за ресто в BGN и EUR (курс 1.95583).",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#16a34a",
+        theme_color: "#16a34a",
+        icons: [
+          {
+            src: svgDataUrl,
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "any maskable"
+          }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const link = document.getElementById('pwa-manifest');
+      link.href = url;
+
+      // apple-touch-icon
+      const apple = document.getElementById('apple-touch-icon');
+      apple.href = svgDataUrl;
+    })();
+
+    /*******************************************************************
+     * Service worker registration (отново: динамичен blob) — минимален offline cache
+     *******************************************************************/
+    (function registerSW(){
+      if('serviceWorker' in navigator){
+        const swCode = `
+          const CACHE = 'dualpay-cache-v1';
+          self.addEventListener('install', (e) => {
+            self.skipWaiting();
+            e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./'])));
+          });
+          self.addEventListener('fetch', (e) => {
+            e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+          });
+        `;
+        const blob = new Blob([swCode], {type:'text/javascript'});
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(()=>{/* ignore */});
+      }
+    })();
+
+    /*******************************************************************
+     * Background pattern generation — шахматна мрежа от символи/фигури:
+     * - Монета
+     * - Символ €
+     * - Портфейл (wallet)
+     * - Бележка/чек (receipt)
+     * Поставени в строго редуване, с opacity 0.08, цвят тъмносив и плавна анимация.
+     *******************************************************************/
+    (function createPattern(){
+      const types = ['coin','euro','wallet','note'];
+      const container = document.getElementById('pattern');
+      const cols = Math.ceil(window.innerWidth / 80);
+      const rows = Math.ceil(window.innerHeight / 80);
+      const gapX = Math.max(64, Math.floor(window.innerWidth / cols));
+      const gapY = Math.max(64, Math.floor(window.innerHeight / rows));
+      let idx = 0;
+      for(let r=0;r<rows+2;r++){
+        for(let c=0;c<cols+2;c++){
+          const div = document.createElement('div');
+          div.className = 'pattern-item';
+          const left = c * gapX - 40;
+          const top = r * gapY - 40;
+          div.style.left = left + 'px';
+          div.style.top = top + 'px';
+          // alternate type strictly
+          const t = types[(idx) % types.length];
+          div.innerHTML = iconMarkup(t);
+          // animation offset:
+          const anim = (idx % 2 === 0) ? 'floatA' : 'floatB';
+          div.style.animation = `${anim} ${8 + (idx%5)}s ease-in-out infinite`;
+          div.style.animationDelay = `${(idx%7)*-0.4}s`;
+          idx++;
+          container.appendChild(div);
+        }
+      }
+
+      function iconMarkup(type){
+        const stroke = 'none';
+        const fill = '#374151'; // dark gray
+        if(type === 'coin'){
+          return `<svg width="36" height="36" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <text x="12" y="15" font-family="Comfortaa, Inter" font-weight="700" font-size="9" fill="#fff" text-anchor="middle">2</text>
+          </svg>`;
+        } else if(type === 'euro'){
+          return `<svg width="36" height="36" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <text x="12" y="16" font-family="Comfortaa, Inter" font-weight="700" font-size="14" fill="${fill}" text-anchor="middle">€</text>
+          </svg>`;
+        } else if(type === 'wallet'){
+          return `<svg width="36" height="36" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M2 7a2 2 0 0 1 2-2h14v2H4v10h16v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"/>
+          </svg>`;
+        } else { // note
+          return `<svg width="36" height="36" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="3" y="6" width="18" height="12" rx="1"/>
+            <path d="M7 9h10" stroke="#fff" stroke-width="0.8" stroke-linecap="round"/>
+          </svg>`;
+        }
+      }
+    })();
+
+    /*******************************************************************
+     * Core logic: пресмятане и UI поведение
+     *******************************************************************/
+    function calculateAndRender(){
+      const amount = toNum(amountEl.value);
+      const amountCurrency = amountCurrencyEl.value; // BGN or EUR
+      const amountBGN = amountCurrency === 'EUR' ? amount * RATE : amount;
+
+      const paidBGN = toNum(paidBgnEl.value);
+      const paidEUR = toNum(paidEurEl.value);
+      const totalPaidBGN = paidBGN + (paidEUR * RATE);
+
+      const diff = +(totalPaidBGN - amountBGN).toFixed(2); // в лв
+      // If insufficient:
+      if(diff < -0.004){
+        // show error box: колко липсва (в предпочитаната валута — използваме валутата на сумата)
+        const missingBGN = Math.abs(diff);
+        let missingText = '';
+        if(amountCurrency === 'EUR'){
+          const missingEUR = (missingBGN / RATE).toFixed(2);
+          missingText = `Недостатъчна сума — липсват ${missingEUR} € (${missingBGN.toFixed(2)} BGN)`;
+        } else {
+          missingText = `Недостатъчна сума — липсват ${missingBGN.toFixed(2)} BGN`;
+        }
+        errorEl.classList.remove('hidden');
+        errorEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M12 9v4" stroke="#7f1d1d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17h.01" stroke="#7f1d1d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0z" stroke="#7f1d1d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div>`+missingText+`</div>`;
+        // hide result
+        resultBox.classList.remove('visible');
+      } else {
+        // hide error
+        errorEl.classList.add('hidden');
+        // compute change (resto)
+        const changeBGN = Math.max(0, diff);
+        const changeEUR = +(changeBGN / RATE).toFixed(2);
+        // Show result box
+        resultBox.classList.add('visible');
+
+        // Show primary according to active segmented button
+        const showIn = showBgnBtn.classList.contains('active') ? 'BGN' : 'EUR';
+
+        if(showIn === 'BGN'){
+          restoPrimary.textContent = `${changeBGN.toFixed(2)} BGN`;
+          restoSecondary.textContent = `≈ ${changeEUR.toFixed(2)} EUR`;
+        } else {
+          restoPrimary.textContent = `${changeEUR.toFixed(2)} EUR`;
+          restoSecondary.textContent = `≈ ${changeBGN.toFixed(2)} BGN`;
+        }
+      }
+    }
+
+    // UI: segmented behaviour
+    function setActiveSegment(btn){
+      [showBgnBtn, showEurBtn].forEach(b=>{
+        b.classList.remove('active');
+        b.setAttribute('aria-selected','false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      calculateAndRender();
+    }
+
+    // event listeners
+    [amountEl, amountCurrencyEl, paidBgnEl, paidEurEl].forEach(el=>{
+      el.addEventListener('input', () => {
+        // small debounce for numeric typing
+        window.requestAnimationFrame(calculateAndRender);
+      });
+    });
+
+    showBgnBtn.addEventListener('click', ()=> setActiveSegment(showBgnBtn));
+    showEurBtn.addEventListener('click', ()=> setActiveSegment(showEurBtn));
+
+    // init
+    calculateAndRender();
+
+    // small accessibility: focus order friendly for one-hand mobile use
+    // place cursor focus on paid fields when amount present
+    amountEl.addEventListener('change', () => {
+      if(toNum(amountEl.value) > 0) {
+        paidBgnEl.focus();
+      }
+    });
+
+    /*******************************************************************
+     * Допълнителни удобства: клавиш Enter превключва фокуса към следващото поле
+     *******************************************************************/
+    const inputs = [amountEl, paidBgnEl, paidEurEl];
+    inputs.forEach((inp, i) => {
+      inp.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          const next = inputs[i+1];
+          if(next) next.focus();
+        }
+      });
+    });
+
+    /*******************************************************************
+     * Малко пояснение за разработчика/хостване:
+     * - Запази този файл като index.html и го хостни по HTTPS (за PWA install).
+     * - Можеш да промениш имената, footer текста и курса в константата RATE.
+     *******************************************************************/
+  </script>
+</body>
+</html>
